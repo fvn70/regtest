@@ -1,4 +1,6 @@
-from flask import Flask, render_template
+import re
+
+from flask import Flask, render_template, request
 import sys
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -23,10 +25,21 @@ class Record(Base):
 
 Base.metadata.create_all(engine)
 
-@app.route('/')
-def index():
-    return render_template('home.html')
+def save_data(reg, text, res):
+    rec = Record(regex=reg, text=text, result=res)
+    session.add(rec)
+    session.commit()
 
+@app.route('/', methods=['POST', 'GET'])
+def index():
+    if request.method == 'GET':
+        return render_template('home.html')
+    else:
+        regex = request.form['regex']
+        text = request.form['text']
+        result = re.match(regex, text) is not None
+        save_data(regex, text, result)
+        return 'True' if result else 'False'
 
 # don't change the following way to run flask:
 if __name__ == '__main__':
