@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, render_template
 import sys
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -22,6 +22,11 @@ class Record(Base):
     result = Column(Boolean())
 
 Base.metadata.create_all(engine)
+
+@app.route('/')
+def index():
+    return render_template('home.html')
+
 
 # don't change the following way to run flask:
 if __name__ == '__main__':
