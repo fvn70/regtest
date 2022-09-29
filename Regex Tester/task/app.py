@@ -1,6 +1,6 @@
 import re
 
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect
 import sys
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -11,7 +11,8 @@ app = Flask(__name__)
 
 # write your code here
 Base = declarative_base()
-engine = create_engine('sqlite:///db.sqlite3')
+engine = create_engine('sqlite:///db.sqlite3?check_same_thread=False')
+
 Session = sessionmaker(bind=engine)
 session = Session()
 
@@ -28,7 +29,24 @@ Base.metadata.create_all(engine)
 def save_data(reg, text, res):
     rec = Record(regex=reg, text=text, result=res)
     session.add(rec)
+    rec_id = session.query(Record).all()[-1].id
     session.commit()
+    return rec_id
+
+@app.route('/history/')
+def view_history():
+    recs = reversed(session.query(Record).all())
+    return render_template('history.html', recs=recs)
+
+@app.route('/result/<id>/')
+def view_result(id):
+    query = session.query(Record)
+    rec = query.filter(Record.id == id)[0]
+    res = str(bool(rec.result))
+    return render_template('result.html',
+                           regex=rec.regex,
+                           text=rec.text,
+                           result=res)
 
 @app.route('/', methods=['POST', 'GET'])
 def index():
@@ -38,8 +56,8 @@ def index():
         regex = request.form['regex']
         text = request.form['text']
         result = re.match(regex, text) is not None
-        save_data(regex, text, result)
-        return 'True' if result else 'False'
+        id = save_data(regex, text, result)
+        return redirect(f'/result/{id}/')
 
 # don't change the following way to run flask:
 if __name__ == '__main__':
